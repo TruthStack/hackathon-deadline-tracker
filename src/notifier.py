@@ -48,6 +48,13 @@ class TelegramNotifier:
             hours = int(hours_remaining % 24)
             return f"{days}d {hours}h"
     
+    def escape_markdown(self, text: str) -> str:
+        """Escape special Markdown characters to prevent parsing errors."""
+        special_chars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']
+        for char in special_chars:
+            text = text.replace(char, '\\' + char)
+        return text
+    
     def format_message(self, hackathon: Dict) -> str:
         """
         Format hackathon data into a notification message.
@@ -59,16 +66,17 @@ class TelegramNotifier:
             Formatted message string
         """
         emoji = self._get_emoji(hackathon['alert_level'])
-        name = hackathon['name']
+        # Escape special characters in name to prevent Markdown errors
+        name = self.escape_markdown(hackathon['name'])
         countdown = self.format_countdown(hackathon['hours_remaining'])
         deadline = hackathon['deadline'].strftime('%Y-%m-%d %H:%M UTC')
         url = hackathon['url']
         level = hackathon['alert_level']
         
         # Build message
-        message = f"{emoji} **{level} ALERT**\n\n"
-        message += f"**{name}**\n\n"
-        message += f"⏰ **{countdown} remaining**\n"
+        message = f"{emoji} *{level} ALERT*\n\n"
+        message += f"*{name}*\n\n"
+        message += f"⏰ *{countdown} remaining*\n"
         message += f"📅 Deadline: {deadline}\n\n"
         
         if hackathon.get('prize_amount'):
@@ -77,9 +85,9 @@ class TelegramNotifier:
         message += f"🔗 [Submit Now]({url})\n\n"
         
         if level == "CRITICAL":
-            message += "⚠️ **FINAL HOURS - SUBMIT NOW!**"
+            message += "⚠️ *FINAL HOURS \\- SUBMIT NOW\\!*"
         elif level == "HIGH":
-            message += "⚡ **Deadline approaching fast!**"
+            message += "⚡ *Deadline approaching fast\\!*"
         
         return message
     
@@ -122,12 +130,20 @@ class TelegramNotifier:
                 'disable_web_page_preview': False
             }
             
-            response = requests.post(self.api_url, json=payload, timeout=10)
-            response.raise_for_status()
+            response = requests.post(self.api_url, json=payload, timeout=15)
             
+            # Check for Telegram API errors
+            if response.status_code != 200:
+                error_data = response.json()
+                print(f"❌ Telegram API error for '{hackathon['name']}':")
+                print(f"   Status: {response.status_code}")
+                print(f"   Error: {error_data.get('description', 'Unknown error')}")
+                return False
+            
+            print(f"✅ Sent: {hackathon['name']}")
             return True
         except requests.RequestException as e:
-            print(f"Error sending Telegram notification: {e}")
+            print(f"❌ Network error sending '{hackathon['name']}': {e}")
             return False
     
     def send_batch(self, hackathons: list, dry_run: bool = False) -> Dict[str, int]:
