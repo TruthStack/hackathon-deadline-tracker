@@ -107,7 +107,18 @@ def main(dry_run: Optional[bool] = None, force: bool = False):
         to_notify = urgent_hackathons
     else:
         print("\n🔔 Checking notification state...")
-        to_notify = state_manager.filter_for_notification(urgent_hackathons)
+        to_notify = []
+        skipped = []
+        for h in urgent_hackathons:
+            if state_manager.should_notify(h):
+                to_notify.append(h)
+            else:
+                skipped.append(h)
+        
+        if skipped:
+            print(f"⚠️  Skipping {len(skipped)} hackathons (recently notified):")
+            for h in skipped:
+                print(f"   - {h['name']} ({h['hours_remaining']:.1f}h left)")
     
     print(f"✅ {len(to_notify)} hackathons need notification")
     
