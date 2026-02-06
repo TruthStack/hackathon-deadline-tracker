@@ -5,8 +5,14 @@ on:
     # Run every 10 hours (at 00:00, 10:00, 20:00 UTC)
     - cron: '0 0,10,20 * * *'
   
-  # Allow manual trigger
+  # Allow manual trigger with options
   workflow_dispatch:
+    inputs:
+      force:
+        description: 'Force send all notifications (ignore state)'
+        required: false
+        default: 'false'
+        type: boolean
 
 jobs:
   check-deadlines:
@@ -37,7 +43,11 @@ jobs:
           TOP_N_HACKATHONS: ${{ secrets.TOP_N_HACKATHONS || '3' }}
         run: |
           cd src
-          python main.py
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then
+            python main.py --force
+          else
+            python main.py
+          fi
       
       - name: Commit state changes
         run: |
