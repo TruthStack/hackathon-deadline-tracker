@@ -1,0 +1,17 @@
+{
+  "https://devpost.com/critical": {
+    "last_notified": "2026-02-06T16:35:10.238312",
+    "level": "CRITICAL",
+    "name": "Critical Hackathon"
+  },
+  "https://devpost.com/high": {
+    "last_notified": "2026-02-06T16:35:10.239314",
+    "level": "HIGH",
+    "name": "High Priority Hackathon"
+  },
+  "https://devpost.com/medium": {
+    "last_notified": "2026-02-06T16:35:10.239314",
+    "level": "MEDIUM",
+    "name": "Medium Priority Hackathon"
+  }
+}

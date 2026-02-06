@@ -1,0 +1,46 @@
+name: Hackathon Deadline Watch
+
+on:
+  schedule:
+    # Run every 10 hours (at 00:00, 10:00, 20:00 UTC)
+    - cron: '0 0,10,20 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  check-deadlines:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run deadline watcher
+        env:
+          DEVPOST_USERNAME: ${{ secrets.DEVPOST_USERNAME }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TOP_N_HACKATHONS: ${{ secrets.TOP_N_HACKATHONS || '3' }}
+        run: |
+          cd src
+          python main.py
+      
+      - name: Commit state changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/state.json
+          git diff --cached --quiet || git commit -m "chore: update notification state [skip ci]"
+          git push
