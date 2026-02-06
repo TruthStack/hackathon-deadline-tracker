@@ -4,6 +4,7 @@ Sends formatted alerts via Telegram Bot API.
 """
 
 import requests
+import time
 from typing import Dict
 from datetime import datetime, timedelta
 
@@ -143,11 +144,15 @@ class TelegramNotifier:
         sent = 0
         failed = 0
         
-        for hackathon in hackathons:
+        for i, hackathon in enumerate(hackathons):
             if self.send_notification(hackathon, dry_run=dry_run):
                 sent += 1
             else:
                 failed += 1
+            
+            # Add delay between messages to avoid Telegram rate limiting
+            if i < len(hackathons) - 1 and not dry_run:
+                time.sleep(2)
         
         return {'sent': sent, 'failed': failed}
     
