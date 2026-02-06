@@ -137,8 +137,8 @@ class UrgencyEngine:
                 'notification_interval': self.get_notification_interval(alert_level)
             })
         
-        # Sort by priority (highest first)
-        processed.sort(key=lambda h: h['priority_score'], reverse=True)
+        # Sort by hours remaining (least time first = most urgent)
+        processed.sort(key=lambda h: h['hours_remaining'])
         
         # Return top N
         return processed[:self.top_n]
