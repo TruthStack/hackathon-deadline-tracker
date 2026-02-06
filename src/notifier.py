@@ -80,7 +80,9 @@ class TelegramNotifier:
         message += f"📅 Deadline: {deadline}\n\n"
         
         if hackathon.get('prize_amount'):
-            message += f"💰 Prize: ${hackathon['prize_amount']:,.0f}\n\n"
+            message += f"💰 *Prize: ${hackathon['prize_amount']:,.0f}*\n\n"
+        else:
+            message += "💰 *Prize: TBA / Swag*\n\n"
         
         message += f"🔗 [Submit Now]({url})\n\n"
         

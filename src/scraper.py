@@ -163,28 +163,67 @@ class DevpostScraper:
     
     def _extract_prize_from_text(self, text: str) -> Optional[float]:
         """Extract prize amount from text content."""
-        # Pattern: "$40,000 in prizes"
-        usd_pattern = r'\$([0-9,]+)\s*(?:in prizes)?'
-        match = re.search(usd_pattern, text)
-        if match:
-            try:
-                prize_str = match.group(1).replace(',', '')
-                return float(prize_str)
-            except ValueError:
-                pass
+        # Normalize text to lower case for easier matching
+        text_lower = text.lower()
         
-        # Pattern: "₹ 50,000 in prizes" (INR)
-        inr_pattern = r'₹\s*([0-9,]+)'
-        match = re.search(inr_pattern, text)
-        if match:
-            try:
-                prize_str = match.group(1).replace(',', '')
-                # Convert INR to USD (approximate)
-                return float(prize_str) / 83.0
-            except ValueError:
-                pass
+        # Common currencies cleanup map
+        currencies = {
+            '$': 1.0,  'usd': 1.0,
+            '€': 1.08, 'eur': 1.08,
+            '£': 1.25, 'gbp': 1.25,
+            '₹': 0.012, 'inr': 0.012,
+            'c$': 0.74, 'cad': 0.74,
+            'a$': 0.65, 'aud': 0.65
+        }
         
-        return None
+        # Pattern for "Prize pool: $50,000" or "$50,000 in prizes"
+        # Matches: $50,000, 50,000 USD, 50k USD
+        # Group 1: Currency prefix, Group 2: Amount, Group 3: Modifier (k/m), Group 4: Currency suffix
+        prize_pattern = r'([$€£₹])?\s*([0-9,]+(?:\.[0-9]{1,2})?)\s*(k|m|mil|million)?\s*([a-z]{3})?'
+        
+        # Find all matches
+        matches = re.finditer(prize_pattern, text_lower)
+        
+        max_prize = 0.0
+        
+        for match in matches:
+            prefix, amount_str, modifier, suffix = match.groups()
+            
+            # Skip if no currency indicator found (avoid matching years like 2026)
+            if not prefix and not suffix and 'prize' not in text_lower:
+                continue
+            
+            # Skip if suffix isn't a known currency
+            if suffix and suffix not in currencies:
+                continue
+                
+            try:
+                base_amount = float(amount_str.replace(',', ''))
+                
+                # Handle modifiers
+                if modifier:
+                    if modifier in ['k']:
+                        base_amount *= 1000
+                    elif modifier in ['m', 'mil', 'million']:
+                        base_amount *= 1000000
+                
+                # Determine exchange rate
+                rate = 1.0
+                if prefix and prefix in currencies:
+                    rate = currencies[prefix]
+                elif suffix and suffix in currencies:
+                    rate = currencies[suffix]
+                
+                val = base_amount * rate
+                
+                # Filter out unreasonably small numbers (likely dates or counts)
+                if val > 100:
+                    max_prize = max(max_prize, val)
+                    
+            except ValueError:
+                continue
+                
+        return max_prize if max_prize > 0 else None
     
     def _extract_location_from_text(self, text: str) -> str:
         """Extract location from text content."""

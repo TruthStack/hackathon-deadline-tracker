@@ -1,0 +1,56 @@
+name: Add External Hackathon
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Hackathon URL'
+        required: true
+        type: string
+      deadline:
+        description: 'Deadline (YYYY-MM-DD) - Optional'
+        required: false
+        type: string
+
+jobs:
+  add-link:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+      
+      - name: Add Hackathon
+        run: |
+          cd src
+          if [ -n "${{ github.event.inputs.deadline }}" ]; then
+            python add_hackathon.py "${{ github.event.inputs.url }}" --deadline "${{ github.event.inputs.deadline }}"
+          else
+            python add_hackathon.py "${{ github.event.inputs.url }}"
+          fi
+      
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Stash, pull, pop strategy for safety
+          git stash
+          git pull --rebase origin main || true
+          git stash pop || true
+          
+          git add data/external.json
+          git diff --cached --quiet || git commit -m "feat: track new hackathon via workflow [skip ci]"
+          git push

@@ -70,12 +70,35 @@ def main(dry_run: Optional[bool] = None, force: bool = False):
     
     # Step 1: Scrape Devpost profile
     print("🔍 Scraping Devpost profile...")
+    hackathons = []
     try:
         hackathons = scrape_devpost(config['devpost_username'])
-        print(f"✅ Found {len(hackathons)} active hackathons")
+        print(f"✅ Found {len(hackathons)} active Devpost hackathons")
     except Exception as e:
         print(f"❌ Scraping failed: {e}")
-        sys.exit(1)
+        # Continue to try external hackathons even if scraper fails
+    
+    # Step 1.5: Load External Hackathons
+    external_file = os.path.join('data', 'external.json')
+    if os.path.exists(external_file):
+        try:
+            import json
+            from dateutil import parser as date_parser
+            
+            with open(external_file, 'r') as f:
+                external_data = json.load(f)
+                
+            print(f"🔍 Loading {len(external_data)} external hackathons...")
+            for h in external_data:
+                # Convert string deadline to datetime
+                if isinstance(h.get('deadline'), str):
+                    h['deadline'] = date_parser.parse(h['deadline'])
+                hackathons.append(h)
+                
+        except Exception as e:
+            print(f"⚠️  Failed to load external hackathons: {e}")
+    
+    print(f"✅ Total active hackathons: {len(hackathons)}")
     
     if not hackathons:
         print("\n✨ No active hackathons found. You're all clear!")
